@@ -28,6 +28,7 @@ const LOOKAHEAD_TOKENS = 90;
 const OVERLAP_TOKENS = 2;
 const REPEAT_LOOKBACK_TOKENS = 60;
 const MINIMUM_MATCH_SCORE = 0.57;
+const MINIMUM_PROVIDER_CONFIDENCE = 0.35;
 const COMMON_WORDS = new Set([
   'a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', 'for', 'from', 'in', 'is', 'it',
   'of', 'on', 'or', 'our', 'so', 'that', 'the', 'their', 'them', 'then', 'there', 'this',
@@ -115,8 +116,15 @@ export class AdaptiveSpeakingSession {
   private lowConfidenceCount = 0;
   private lastTimestamp = -1;
   private lastResult: AlignmentResult;
+  private readonly minimumMatchScore: number;
+  private readonly minimumProviderConfidence: number;
 
-  constructor(sections: AlignmentSection[]) {
+  constructor(sections: AlignmentSection[], options: { minimumMatchScore?: number; minimumProviderConfidence?: number } = {}) {
+    this.minimumMatchScore = options.minimumMatchScore ?? MINIMUM_MATCH_SCORE;
+    this.minimumProviderConfidence = options.minimumProviderConfidence ?? MINIMUM_PROVIDER_CONFIDENCE;
+    if (![this.minimumMatchScore, this.minimumProviderConfidence].every((value) => Number.isFinite(value) && value >= 0 && value <= 1)) {
+      throw new Error('Alignment confidence thresholds must be between 0 and 1.');
+    }
     this.sections = sections.map((section) => alignmentSectionSchema.parse(section));
     if (new Set(this.sections.map((section) => section.id)).size !== this.sections.length) {
       throw new Error('Script section IDs must be unique.');
@@ -193,9 +201,12 @@ export class AdaptiveSpeakingSession {
     const lowerBound = Math.max(0, this.confirmedNextToken - OVERLAP_TOKENS);
     const upperBound = Math.min(this.tokens.length, this.confirmedNextToken + LOOKAHEAD_TOKENS);
     const candidate = findBestCandidate(this.tokens, phrase, lowerBound, upperBound, this.confirmedNextToken);
-    const recognitionConfidence = control.recognitionConfidence ?? 0.85;
-    const confidence = candidate ? candidate.score * recognitionConfidence : 0;
-    const accepted = candidate !== null && candidate.score >= MINIMUM_MATCH_SCORE && recognitionConfidence >= 0.35;
+    const providerConfidence = control.providerConfidence;
+    // Result confidence is the matcher's lexical score. Provider confidence is optional
+    // metadata and must never be invented or folded into a different score.
+    const confidence = candidate?.score ?? 0;
+    const accepted = candidate !== null && candidate.score >= this.minimumMatchScore
+      && (providerConfidence === undefined || providerConfidence >= this.minimumProviderConfidence);
 
     if (!control.isFinal) {
       this.speakerState = 'listening';
@@ -212,10 +223,11 @@ export class AdaptiveSpeakingSession {
         Math.max(0, this.confirmedNextToken - REPEAT_LOOKBACK_TOKENS),
         this.confirmedNextToken,
       );
-      if (repeat && repeat.score >= MINIMUM_MATCH_SCORE && recognitionConfidence >= 0.35) {
+      if (repeat && repeat.score >= this.minimumMatchScore
+        && (providerConfidence === undefined || providerConfidence >= this.minimumProviderConfidence)) {
         this.lowConfidenceCount = 0;
         this.speakerState = 'repeated';
-        return this.resultAt('repeated', 'hold', repeat.start, repeat.end - 1, repeat.score * recognitionConfidence,
+        return this.resultAt('repeated', 'hold', repeat.start, repeat.end - 1, repeat.score,
           repeat.exact ? 'exact' : 'close', false, 'A previous passage was repeated. Confirmed position stays where it was.');
       }
       this.lowConfidenceCount += 1;

@@ -209,7 +209,7 @@ export const transcriptUpdateSchema = z.object({
   text: z.string().max(2_000),
   isFinal: z.boolean(),
   timestampMs: z.number().finite().nonnegative().optional(),
-  recognitionConfidence: z.number().min(0).max(1).optional(),
+  providerConfidence: z.number().min(0).max(1).optional(),
 }).strict();
 export const alignmentControlSchema = z.discriminatedUnion('type', [
   transcriptUpdateSchema,

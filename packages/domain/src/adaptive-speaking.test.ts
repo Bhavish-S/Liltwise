@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { AdaptiveSpeakingSession, scriptTextToAlignmentSections } from './index.ts';
+import { syntheticTranscriptExpectedPositions, syntheticTranscriptFixtures } from './transcription-fixtures.ts';
 
 const script = [
   { id: 'opening', text: 'Good morning, everyone. We gather here today to celebrate bright ideas.' },
@@ -107,9 +108,45 @@ test('holds on unrelated speech and low recognition confidence', () => {
   const noise = tracker.apply({ type: 'transcript', text: 'The and it is a', isFinal: true });
   assert.equal(noise.action, 'hold');
   assert.equal(noise.state, 'uncertain');
-  const low = tracker.apply({ type: 'transcript', text: 'Good morning everyone', isFinal: true, recognitionConfidence: 0.1 });
+  const low = tracker.apply({ type: 'transcript', text: 'Good morning everyone', isFinal: true, providerConfidence: 0.1 });
   assert.equal(low.action, 'hold');
   assert.equal(tracker.confirmedPosition.tokenIndex, 0);
+});
+
+test('does not invent provider confidence when a provider supplies none', () => {
+  const result = session().apply({ type: 'transcript', text: 'Good morning everyone', isFinal: true });
+  assert.equal(result.action, 'advance');
+  assert.ok(result.confidence > 0.5);
+  assert.throws(() => session().apply({ type: 'transcript', text: 'Good morning everyone', isFinal: true, providerConfidence: 1.1 }));
+});
+
+test('allows deterministic threshold configuration for matcher tests', () => {
+  const strict = new AdaptiveSpeakingSession(script, { minimumMatchScore: 0.99 });
+  assert.equal(strict.apply({ type: 'transcript', text: 'We gather there today', isFinal: true }).action, 'hold');
+  assert.throws(() => new AdaptiveSpeakingSession(script, { minimumProviderConfidence: 2 }));
+});
+
+for (const fixture of syntheticTranscriptFixtures) {
+  test(`synthetic transcript fixture: ${fixture.name}`, () => {
+    const tracker = new AdaptiveSpeakingSession(fixture.sections);
+    let result = tracker.apply({ type: 'transcript', text: '', isFinal: true });
+    let confirmedProgress = 0;
+    for (const event of fixture.events) {
+      result = tracker.apply(event);
+      if (!result.isPreview) confirmedProgress = result.progress;
+    }
+    assert.equal(result.action, fixture.expected.action);
+    assert.equal(result.state, fixture.expected.state);
+    assert.equal(result.currentSectionId, fixture.expected.sectionId);
+    assert.deepEqual(tracker.confirmedPosition, syntheticTranscriptExpectedPositions[fixture.name]);
+    if (fixture.expected.progress === 'zero') assert.equal(confirmedProgress, 0);
+    if (fixture.expected.progress === 'positive') assert.ok(confirmedProgress > 0);
+    if (fixture.expected.progress === 'unchanged') assert.equal(confirmedProgress, 0);
+  });
+}
+
+test('rejects malformed transcript events at the shared contract boundary', () => {
+  assert.throws(() => session().apply({ type: 'transcript', text: 'x'.repeat(2_001), isFinal: true }));
 });
 
 test('a pause holds position and never marks the speech complete', () => {

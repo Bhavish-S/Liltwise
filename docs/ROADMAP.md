@@ -40,9 +40,10 @@
 
 ## Milestone 5B — Real transcription provider (not started)
 
-- Compare and benchmark cross-platform remote streaming and local/offline recognition, with special checks for latency, corrections, supported languages, memory, packaging size, privacy, and recurring cost.
-- Add microphone permission only after the user explicitly starts tracking. If audio leaves the device, explain that clearly and use short-lived server-minted credentials, quotas, and minimal retention/logging.
-- Feed interim and finalized provider events into the existing `AdaptiveSpeakingSession`; do not couple matching rules to a provider SDK.
+- **5B-0 evaluation complete:** checked official docs for OpenAI Realtime, whisper.cpp, sherpa-onnx, Apple Speech/SpeechAnalyzer, and Windows Speech Recognition; added deterministic synthetic text fixtures. No microphone or provider dependency was added. See [provider evaluation](TRANSCRIPTION_PROVIDER_EVALUATION.md).
+- **Proposed next 5B implementation:** add a provider-neutral event contract/adapter and opt-in `gpt-live-transcribe` prototype using server-minted short-lived credentials. This scope still requires explicit approval. Do not include speech generation or meeting integrations.
+- Ask for microphone permission only after explicit Start; show listening and stop controls; disclose audio leaving-device, avoid default recording/transcript retention, enforce quotas/minimal logging, and clean up resources on stop/error/close.
+- Compare Kannada, mixed language, terminology, noise, privacy, latency, CPU, memory, network, battery, and cost on consented samples and actual Mac and Windows devices. Run `whisper.cpp` on identical samples. Do not treat synthetic fixtures as recognition accuracy evidence.
 
 ## Privacy and platform validation
 

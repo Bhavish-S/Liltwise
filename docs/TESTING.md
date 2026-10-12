@@ -91,6 +91,14 @@ The floating teleprompter now includes **Speech tracking simulator · Simulation
 
 Automated matcher tests cover matching, Unicode, corrections/overlap, staleness, pauses, skips, repeats, uncertainty, resynchronization, empty scripts, boundaries and determinism. They do not establish real transcription accuracy or real-device microphone behavior.
 
+### Transcription provider evaluation and synthetic fixtures (Milestone 5B-0)
+
+- `packages/domain/src/transcription-fixtures.ts` contains explicit synthetic text-only cases, including English, Kannada/accented Unicode, mixed language, interim revisions, stale events, pauses, repeats, skips, improvisation, and invalid/low-information text. The fixtures contain no recorded speech and measure no provider accuracy.
+- Matcher tests assert final state/action, section, and confirmed cursor position for each sequence. Thresholds can be configured for deterministic tests. Missing provider confidence is not invented; `AlignmentResult.confidence` is the matcher lexical score.
+- OpenAI live delta/final reconciliation, provider item ordering, provider timestamps/confidence, and microphone lifecycle are design/research only. No provider SDK, microphone access, permission prompt, audio streaming, or live provider test was added.
+- Official documentation was checked 2026-10-12. Kannada/code-switch performance, latency, device load, cost under real use, permissions, and packaging require consented tests on Mac and Windows. See [Transcription provider evaluation](TRANSCRIPTION_PROVIDER_EVALUATION.md).
+- Verification run on 2026-10-12: `pnpm lint`, `pnpm typecheck`, `pnpm test` (71 tests total: 49 domain, 13 site, 9 desktop), `pnpm build` (Next.js production build and Electron macOS arm64 package), and `git diff --check` all passed. Build-generated `apps/site/next-env.d.ts` was restored to its committed development-types contents. Windows packaging/runtime and all microphone/provider checks remain untested.
+
 ### Milestone 5A verification record — 2026-10-12
 
 - `pnpm dev:desktop` launched the workspace renderer and floating teleprompter successfully. Development diagnostics reported `rootChildCount: 1` for the workspace; the renderer console showed both views loaded without application errors.
