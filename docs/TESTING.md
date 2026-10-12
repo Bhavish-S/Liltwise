@@ -13,7 +13,7 @@ pnpm build
 
 - `lint` runs ESLint across the site and shared packages.
 - `typecheck` runs TypeScript checks for the workspace applications and shared packages.
-- `test` runs shared domain tests plus Event Brain validation, upload extraction, rate-limit, and generation-service tests with Node's built-in test runner. Provider calls are mocked; a live OpenAI request requires the local server environment variables and is not part of automated tests.
+- `test` runs adaptive-alignment and shared domain tests, Event Brain validation/upload/generation tests, and desktop companion-server tests with Node's built-in test runner. Provider calls are mocked; a live AI request is not part of automated tests.
 - `build` creates a production website build and packages the local Electron app for the current macOS architecture. It does not sign or notarize an installer.
 
 ## Run locally
@@ -74,6 +74,36 @@ Automated document extraction tests ran against generated in-memory TXT, PDF and
 6. Hide the floating window, reopen it, and confirm the most recent script/settings remain. Confirm the workspace status reflects visible/hidden/closed state.
 7. Clear the script and confirm the workspace disables opening and shows an explanation; the floating window should display its empty state if updated with an empty draft.
 8. Confirm no microphone prompt appears and do not assume the overlay is omitted from any screen share or recording.
+
+## Adaptive Speaking Engine simulator (Milestone 5A)
+
+The floating teleprompter now includes **Speech tracking simulator · Simulation · No microphone**. It feeds typed interim/final transcript events into the same shared `AdaptiveSpeakingSession` that a future provider adapter will call. It does not access the microphone or send speech anywhere.
+
+1. Open a script with at least two paragraphs, then open the floating teleprompter and expand the simulator if it is collapsed.
+2. Choose **Interim preview**. Confirm the possible phrase is blue-highlighted and the confirmed progress percentage does not move.
+3. Choose **Confirm next phrase** or **Play sequence**. Confirm a confident match highlights the phrase, advances progress, and scrolls it into view.
+4. Choose **Pause**. Confirm the status says the position is held and does not indicate that the speech is complete. Use **Resume**, then **Confirm next phrase** or **Play sequence**.
+5. Choose **Skip paragraph**. Confirm a confident later passage moves ahead and reports the skip.
+6. Confirm a phrase, then choose **Repeat last sentence**. Confirm the engine identifies the repeated passage but does not move the confirmed position backwards.
+7. Enter an unrelated line under **Unmatched phrase** and choose **Send phrase** repeatedly. Confirm uncertain/diverged status holds position and eventually requests recovery. Select a paragraph under **Recovery passage**, then choose **Resynchronize**.
+8. Choose **Reset**. Confirm the progress, highlight, and simulator status return to the beginning.
+9. Verify ordinary Play/Pause/Reset auto-scroll remains available, script text remains selectable, and no microphone permission prompt appears.
+
+Automated matcher tests cover matching, Unicode, corrections/overlap, staleness, pauses, skips, repeats, uncertainty, resynchronization, empty scripts, boundaries and determinism. They do not establish real transcription accuracy or real-device microphone behavior.
+
+### Milestone 5A verification record — 2026-10-12
+
+- `pnpm dev:desktop` launched the workspace renderer and floating teleprompter successfully. Development diagnostics reported `rootChildCount: 1` for the workspace; the renderer console showed both views loaded without application errors.
+- Manual UI checks used the built-in 75-word sample and left that script text unchanged. Interim preview held confirmed progress; a final match advanced it. Prepared playback advanced through script sections; pause held position, resume continued playback, and simulator reset restored both alignment and scroll position to the beginning.
+- Skip, repeat, unmatched phrase, three-step uncertainty/divergence/recovery, and manual resynchronization controls produced their corresponding visible states. The UI was labelled **SIMULATION · NO MICROPHONE** and no microphone prompt appeared.
+- Port 43129 was initially held by an older Liltwise process running the project’s packaged app. Its startup preceded the current package rebuild and its open renderer lacked the simulator. It was quit through the app menu; afterward `pnpm dev:desktop` bound the companion service successfully. The existing project website server remained on port 3000; port 5173 was free before the development launch.
+- The earlier Electron binary change coincided with Electron’s first-run runtime download (`Downloading Electron binary...`). Electron 44 downloads its matching runtime when first invoked; the next development launch started without another download. No Forge or Vite port configuration change was needed.
+- `pnpm lint`, `pnpm typecheck`, `pnpm test` (28 domain, 13 site, 9 companion tests; 50 total), `pnpm build` (website plus macOS arm64 package), and `git diff --check` passed. These checks do not verify Windows behavior.
+- The engine uses deterministic token/edit-distance matching. It tolerates punctuation, capitalization, small omissions and recognition errors, but does not understand broad semantic paraphrases. Real speech recognition, microphone permission behavior, and Windows GUI behavior remain untested.
+
+## Milestone 5B provider validation plan
+
+Before microphone work, compare browser speech recognition (limited and potentially remote), local `whisper.cpp` (model download, CPU/memory and installer footprint), and remote streaming (consent, latency, network, cost, server-minted ephemeral credentials and abuse limits). Test latency, corrected interim results, English and Kannada, CPU/battery, session shutdown and explicit permission on both macOS and Windows. Never send the long-lived provider key to Electron. Document whether audio leaves the device and retain neither audio nor transcripts by default unless the user explicitly chooses a documented feature.
 
 ## Website-to-desktop transfer checks
 

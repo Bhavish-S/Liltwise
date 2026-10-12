@@ -32,11 +32,17 @@
 - Add account access and persistent event information and scripts behind secure server APIs.
 - Decide how users can delete their data and how long event guides and generated scripts are retained.
 
-## Next — Adaptive Speaking Engine
+## Milestone 5A — Adaptive Speaking Engine core
 
-- Request microphone access only when the speaker starts the feature.
-- Align live transcript updates with script sections and handle pauses, skips, corrections, and repeated phrases.
-- Do not record or retain audio by default.
+- Implemented a deterministic shared matcher for transcript events, with Unicode normalization, bounded passage search, interim previews, confirmed final progress, skip/repeat handling, stale-update protection, pause states, divergence recovery, and manual resynchronization.
+- Added a clearly labelled desktop speech-tracking simulator using the same domain engine. It does not capture microphone audio.
+- Next: validate matcher behavior with representative human transcripts and tune thresholds before adding any speech provider.
+
+## Milestone 5B — Real transcription provider (not started)
+
+- Compare and benchmark cross-platform remote streaming and local/offline recognition, with special checks for latency, corrections, supported languages, memory, packaging size, privacy, and recurring cost.
+- Add microphone permission only after the user explicitly starts tracking. If audio leaves the device, explain that clearly and use short-lived server-minted credentials, quotas, and minimal retention/logging.
+- Feed interim and finalized provider events into the existing `AdaptiveSpeakingSession`; do not couple matching rules to a provider SDK.
 
 ## Privacy and platform validation
 

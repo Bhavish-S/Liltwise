@@ -195,3 +195,51 @@ export type DesktopScriptTransfer = z.infer<typeof desktopScriptTransferSchema>;
 export type CompanionSnapshot = z.infer<typeof companionSnapshotSchema>;
 export type ImportedTeleprompterScript = z.infer<typeof importedTeleprompterScriptSchema>;
 export type CompanionActionResult = z.infer<typeof companionActionResultSchema>;
+
+export const alignmentSectionSchema = z.object({
+  id: z.string().min(1).max(80),
+  text: z.string().max(100_000),
+}).strict();
+export const alignmentPositionSchema = z.object({
+  sectionIndex: z.number().int().min(0),
+  tokenIndex: z.number().int().min(0),
+}).strict();
+export const transcriptUpdateSchema = z.object({
+  type: z.literal('transcript'),
+  text: z.string().max(2_000),
+  isFinal: z.boolean(),
+  timestampMs: z.number().finite().nonnegative().optional(),
+  recognitionConfidence: z.number().min(0).max(1).optional(),
+}).strict();
+export const alignmentControlSchema = z.discriminatedUnion('type', [
+  transcriptUpdateSchema,
+  z.object({ type: z.literal('pause') }).strict(),
+  z.object({ type: z.literal('resume') }).strict(),
+  z.object({ type: z.literal('stop') }).strict(),
+  z.object({ type: z.literal('resynchronize'), position: alignmentPositionSchema }).strict(),
+]);
+export const alignmentSpeakerStateSchema = z.enum([
+  'ready', 'listening', 'advancing', 'paused', 'uncertain', 'repeated', 'skipped-ahead',
+  'diverged', 'recovery-required', 'stopped',
+]);
+export const alignmentActionSchema = z.enum(['advance', 'hold', 'recover', 'none']);
+export const alignmentResultSchema = z.object({
+  state: alignmentSpeakerStateSchema,
+  action: alignmentActionSchema,
+  currentSectionId: z.string().nullable(),
+  currentSectionIndex: z.number().int().nullable(),
+  phraseStartToken: z.number().int().nullable(),
+  phraseEndToken: z.number().int().nullable(),
+  progress: z.number().min(0).max(1),
+  confidence: z.number().min(0).max(1),
+  matchKind: z.enum(['exact', 'close', 'none']),
+  isPreview: z.boolean(),
+  speechComplete: z.literal(false),
+  message: z.string().max(200),
+}).strict();
+export type AlignmentSection = z.infer<typeof alignmentSectionSchema>;
+export type AlignmentPosition = z.infer<typeof alignmentPositionSchema>;
+export type TranscriptUpdate = z.infer<typeof transcriptUpdateSchema>;
+export type AlignmentControl = z.infer<typeof alignmentControlSchema>;
+export type AlignmentSpeakerState = z.infer<typeof alignmentSpeakerStateSchema>;
+export type AlignmentResult = z.infer<typeof alignmentResultSchema>;

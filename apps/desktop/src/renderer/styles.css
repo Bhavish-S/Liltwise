@@ -132,6 +132,8 @@ button { -webkit-app-region: no-drag; }
 .prompter-meta { display: flex; flex: 0 0 25px; align-items: center; justify-content: space-between; margin-top: 10px; border-bottom: 1px solid rgba(255, 255, 255, .12); color: rgba(242, 240, 249, .5); font-size: 8px; font-weight: 700; letter-spacing: 1px; }
 .prompter-reading-area { min-height: 90px; flex: 1; overflow: auto; padding: 20px 12px 26px; overscroll-behavior: contain; scrollbar-color: rgba(255,255,255,.32) transparent; scrollbar-width: thin; }
 .prompter-script { margin: 0 auto; max-width: 860px; color: #fff; line-height: 1.65; text-shadow: 0 1px 2px rgba(0,0,0,.4); white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; -webkit-app-region: no-drag; }
+.script-token-active { border-radius: 3px; background: rgba(225, 211, 123, .34); box-shadow: 0 0 0 2px rgba(225, 211, 123, .22); }
+.script-token-active.is-preview { background: rgba(128, 187, 219, .24); box-shadow: 0 0 0 2px rgba(128, 187, 219, .16); }
 .font-size-22 .prompter-script { font-size: 22px; }
 .font-size-24 .prompter-script { font-size: 24px; }
 .font-size-26 .prompter-script { font-size: 26px; }
@@ -154,6 +156,22 @@ button { -webkit-app-region: no-drag; }
 .prompter-empty strong { font-size: 16px; font-weight: 600; }
 .prompter-empty span { color: rgba(255,255,255,.62); font-size: 11px; }
 .prompter-controls { flex: 0 0 auto; padding: 12px 13px 10px; border: 1px solid rgba(255, 255, 255, .1); border-radius: 11px; background: rgba(9, 9, 16, .25); }
+.tracking-simulator { margin-bottom: 11px; padding-bottom: 9px; border-bottom: 1px solid rgba(255,255,255,.12); }
+.tracking-simulator summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: rgba(255,255,255,.9); cursor: pointer; font-size: 9px; font-weight: 600; list-style: none; }
+.tracking-simulator summary::-webkit-details-marker { display: none; }
+.tracking-simulator summary::before { content: '＋'; color: #c8bff2; }
+.tracking-simulator[open] summary::before { content: '−'; }
+.tracking-simulator summary b { color: #e5ce89; font-size: 7px; letter-spacing: .75px; }
+.simulator-status { display: flex; justify-content: space-between; gap: 8px; margin: 7px 0 6px; color: rgba(255,255,255,.72); font-size: 8px; }
+.simulator-actions { display: flex; flex-wrap: wrap; gap: 5px; }
+.simulator-actions button, .simulator-resync { min-height: 25px; padding: 3px 7px; border: 1px solid rgba(255,255,255,.16); border-radius: 5px; background: rgba(255,255,255,.07); color: #f4f2fb; cursor: pointer; font-size: 8px; }
+.simulator-actions button:hover:not(:disabled) { background: rgba(255,255,255,.16); }
+.simulator-actions button:disabled { cursor: not-allowed; opacity: .42; }
+.simulator-resync { display: inline-flex; align-items: center; gap: 6px; color: rgba(255,255,255,.62); }
+.simulator-resync select { max-width: 115px; border: 0; outline: 0; background: #343245; color: white; font-size: 8px; }
+.simulator-improvise { display: inline-flex; align-items: center; gap: 6px; color: rgba(255,255,255,.62); font-size: 8px; }
+.simulator-improvise input { width: 180px; padding: 4px 6px; border: 1px solid rgba(255,255,255,.16); border-radius: 5px; background: #343245; color: white; font-size: 8px; }
+.simulator-message { margin: 6px 0 0; color: rgba(255,255,255,.5); font-size: 8px; line-height: 1.35; }
 .transport-controls { display: flex; align-items: center; gap: 8px; }
 .transport-button { display: inline-flex; height: 29px; align-items: center; gap: 7px; padding: 0 9px; border: 1px solid rgba(255,255,255,.17); border-radius: 6px; background: rgba(255,255,255,.07); color: #f5f3fb; cursor: pointer; font-size: 11px; }
 .transport-button:hover:not(:disabled) { background: rgba(255,255,255,.14); }

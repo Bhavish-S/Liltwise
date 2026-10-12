@@ -38,6 +38,14 @@ Guide upload accepts bounded TXT, Markdown, PDF and DOCX files. Files are parsed
 - The overlay uses a frameless, transparent, resizable BrowserWindow with an always-on-top level. macOS adds its supported floating level and under-window vibrancy; Windows uses its default topmost level. Both still require hands-on testing on the target OS.
 - The editor draft is session-only. There is no microphone access, audio recording, speech recognition, cloud sync, or universal screen-capture exclusion.
 
+## Adaptive Speaking Engine core (Milestone 5A)
+
+- `packages/domain/src/adaptive-speaking.ts` owns a deterministic, provider-independent alignment session. It receives stable ordered section IDs, transcript updates, optional timestamps/confidence, and pause/resume/stop/resynchronize controls. Shared Zod contracts validate the inputs and every result at runtime.
+- Script and transcript text are tokenized with Unicode-aware word segmentation and NFKC/case normalization. The displayed script remains the original string. A bounded forward window, short edit-distance matching, and useful-word checks reduce common-word false matches. A small backward search labels repeated passages while keeping confirmed progress in place. This is near-verbatim lexical matching; it does not understand broad semantic paraphrases or replace words based on meaning.
+- Interim recognition can preview a phrase but keeps confirmed progress unchanged. Final updates move progress only when the match and supplied recognition confidence pass thresholds. Stale timestamps are ignored, uncertain updates hold position, and repeated divergence requests manual recovery. A pause never means the speech is complete.
+- The floating renderer derives temporary paragraph IDs from the current script string, runs this same domain session for simulator input, highlights a phrase, and smoothly scrolls after confirmed advances. The simulator emits transcript-shaped events; a future microphone adapter should feed the same `AdaptiveSpeakingSession.apply` input without replacing the matcher.
+- Milestone 5A does not capture a microphone, request permission, record, or transmit audio. Progress is advisory and can be overridden by ordinary manual scrolling.
+
 The site and desktop UI are separate because their interaction patterns differ. Share contracts and business rules first; only share visual components if that later reduces real maintenance work.
 
 ## Desktop security boundary

@@ -97,3 +97,5 @@ export function formatScriptForTeleprompter(script: {
     ].filter(Boolean).join('\n')),
   ].join('\n\n');
 }
+
+export * from './adaptive-speaking.ts';
