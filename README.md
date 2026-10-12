@@ -23,6 +23,8 @@ pnpm install --store-dir ./.pnpm-store
 
 The package-manager store is kept inside this repository so setup does not place dependency files elsewhere on the computer. It is ignored by Git.
 
+pnpm uses the hoisted workspace layout required by Electron Forge. Only the approved `esbuild` and `electron-winstaller` dependency setup scripts are enabled; other dependency scripts remain blocked unless reviewed.
+
 ## Run the applications
 
 Start the website:

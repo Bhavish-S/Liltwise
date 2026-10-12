@@ -3,7 +3,7 @@ packages:
   - packages/*
 nodeLinker: hoisted
 allowBuilds:
-  electron-winstaller: false
+  electron-winstaller: true
   esbuild: true
   unrs-resolver: false
 minimumReleaseAgeExclude:
