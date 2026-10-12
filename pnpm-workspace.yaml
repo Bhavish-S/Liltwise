@@ -1,0 +1,10 @@
+packages:
+  - apps/*
+  - packages/*
+nodeLinker: hoisted
+allowBuilds:
+  electron-winstaller: false
+  esbuild: true
+  unrs-resolver: false
+minimumReleaseAgeExclude:
+  - zod@4.6.6

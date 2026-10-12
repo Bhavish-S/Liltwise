@@ -1,0 +1,30 @@
+{
+  "name": "liltwise",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.24.0",
+  "engines": {
+    "node": ">=24.11.0"
+  },
+  "scripts": {
+    "dev": "pnpm dev:site",
+    "dev:site": "pnpm --filter @liltwise/site dev",
+    "dev:desktop": "pnpm --filter @liltwise/desktop dev",
+    "build": "pnpm --filter @liltwise/site build && pnpm --filter @liltwise/desktop build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint apps packages",
+    "check": "pnpm lint && pnpm typecheck && pnpm build"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@next/eslint-plugin-next": "16.4.0",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "5.2.0",
+    "eslint": "10.12.0",
+    "typescript-eslint": "8.71.1",
+    "typescript": "5.9.3",
+    "vite": "7.3.7"
+  }
+}
