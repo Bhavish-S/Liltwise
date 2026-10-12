@@ -1,8 +1,19 @@
 import { app, BrowserWindow, ipcMain, type BrowserWindowConstructorOptions, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
 import { join } from 'node:path';
+import { formatScriptForTeleprompter } from '@liltwise/domain';
+import { createCompanionServer } from './companion-server';
 import {
   APP_INFO_CHANNEL,
   appInfoSchema,
+  companionActionResultSchema,
+  companionSnapshotSchema,
+  COMPANION_ACCEPT_IMPORT_CHANNEL,
+  COMPANION_DISMISS_IMPORT_CHANNEL,
+  COMPANION_PAIR_CHANNEL,
+  COMPANION_REVOKE_CHANNEL,
+  COMPANION_SNAPSHOT_CHANNEL,
+  COMPANION_STATE_CHANNEL,
+  desktopScriptTransferSchema,
   GET_TELEPROMPTER_STATUS_CHANNEL,
   HIDE_TELEPROMPTER_CHANNEL,
   OPEN_TELEPROMPTER_CHANNEL,
@@ -13,6 +24,7 @@ import {
   teleprompterActionResultSchema,
   teleprompterDataSchema,
   teleprompterStatusSchema,
+  importedTeleprompterScriptSchema,
   UPDATE_TELEPROMPTER_CHANNEL,
   type TeleprompterData,
 } from '@liltwise/contracts';
@@ -26,6 +38,15 @@ let mainWindow: BrowserWindow | null = null;
 let teleprompterWindow: BrowserWindow | null = null;
 let teleprompterReady = false;
 let isQuitting = false;
+declare const __LILTWISE_ALLOWED_WEB_ORIGINS__: string[];
+const developmentWebsiteOrigins = ['http://localhost:3000', 'http://127.0.0.1:3000'];
+const configuredWebsiteOrigins = typeof __LILTWISE_ALLOWED_WEB_ORIGINS__ === 'undefined'
+  ? []
+  : __LILTWISE_ALLOWED_WEB_ORIGINS__;
+const companionServer = createCompanionServer({
+  allowedOrigins: MAIN_WINDOW_VITE_DEV_SERVER_URL ? developmentWebsiteOrigins : configuredWebsiteOrigins,
+  onStateChanged: () => broadcastCompanionState(),
+});
 let teleprompterData: TeleprompterData = {
   script: '',
   settings: readingSettingsSchema.parse(DEFAULT_READING_SETTINGS),
@@ -81,6 +102,11 @@ function applyPlatformWindowBehavior(window: BrowserWindow): void {
 function broadcastTeleprompterStatus(): void {
   if (!mainWindow || mainWindow.isDestroyed() || mainWindow.webContents.isDestroyed()) return;
   mainWindow.webContents.send(TELEPROMPTER_STATUS_CHANNEL, statusSnapshot());
+}
+
+function broadcastCompanionState(): void {
+  if (!mainWindow || mainWindow.isDestroyed() || mainWindow.webContents.isDestroyed()) return;
+  mainWindow.webContents.send(COMPANION_STATE_CHANNEL, companionServer.snapshot());
 }
 
 function sendTeleprompterData(): void {
@@ -228,6 +254,66 @@ function registerIpcHandlers(): void {
     return statusSnapshot();
   });
 
+  ipcMain.handle(COMPANION_SNAPSHOT_CHANNEL, (event) => {
+    if (!isTrustedMainSender(event)) throw new Error('Only the Liltwise workspace can read companion status.');
+    return companionSnapshotSchema.parse(companionServer.snapshot());
+  });
+
+  ipcMain.handle(COMPANION_PAIR_CHANNEL, (event) => {
+    if (!isTrustedMainSender(event)) throw new Error('Only the Liltwise workspace can start website pairing.');
+    return companionSnapshotSchema.parse(companionServer.createPairingCode());
+  });
+
+  ipcMain.handle(COMPANION_REVOKE_CHANNEL, (event) => {
+    if (!isTrustedMainSender(event)) throw new Error('Only the Liltwise workspace can revoke website pairing.');
+    return companionSnapshotSchema.parse(companionServer.revokePairing());
+  });
+
+  ipcMain.handle(COMPANION_ACCEPT_IMPORT_CHANNEL, (event, input: unknown) => {
+    if (!isTrustedMainSender(event)) throw new Error('Only the Liltwise workspace can approve an incoming script.');
+    const transferId = typeof input === 'string' ? input : '';
+    const pending = companionServer.snapshot().pendingImport;
+    if (!pending || pending.transferId !== transferId) {
+      return companionActionResultSchema.parse({ ok: false, message: 'That incoming script is no longer available. Ask the website to send it again.' });
+    }
+    const validated = desktopScriptTransferSchema.safeParse(pending);
+    if (!validated.success) {
+      companionServer.discardPendingImport(transferId);
+      return companionActionResultSchema.parse({ ok: false, message: 'The incoming script could not be validated and was discarded.' });
+    }
+    const formattedText = formatScriptForTeleprompter(validated.data.script);
+    const data = teleprompterDataSchema.safeParse({ ...teleprompterData, script: formattedText });
+    const imported = importedTeleprompterScriptSchema.safeParse({
+      transferId,
+      title: validated.data.script.title,
+      sectionCount: validated.data.script.sections.length,
+      formattedText,
+    });
+    if (!data.success || !imported.success) {
+      return companionActionResultSchema.parse({ ok: false, message: 'This script is too long for the floating teleprompter. Shorten it on the website and send it again.' });
+    }
+    if (!companionServer.takePendingImport(transferId)) {
+      return companionActionResultSchema.parse({ ok: false, message: 'That incoming script is no longer available. Ask the website to send it again.' });
+    }
+    teleprompterData = data.data;
+    if (teleprompterReady) sendTeleprompterData();
+    broadcastTeleprompterStatus();
+    return companionActionResultSchema.parse({
+      ok: true,
+      message: 'The incoming script is now loaded in the desktop workspace and floating teleprompter.',
+      imported: imported.data,
+    });
+  });
+
+  ipcMain.handle(COMPANION_DISMISS_IMPORT_CHANNEL, (event, input: unknown) => {
+    if (!isTrustedMainSender(event)) throw new Error('Only the Liltwise workspace can dismiss an incoming script.');
+    const transferId = typeof input === 'string' ? input : '';
+    const dismissed = companionServer.discardPendingImport(transferId);
+    return companionActionResultSchema.parse(dismissed
+      ? { ok: true, message: 'The incoming script was dismissed. Your current draft was kept.' }
+      : { ok: false, message: 'That incoming script is no longer available.' });
+  });
+
   ipcMain.handle(OPEN_TELEPROMPTER_CHANNEL, async (event, input: unknown) => {
     if (!isTrustedMainSender(event)) throw new Error('Only the Liltwise workspace can open the teleprompter.');
     const parsed = teleprompterDataSchema.safeParse(input);
@@ -285,6 +371,10 @@ app.on('before-quit', () => {
 
 app.whenReady().then(() => {
   registerIpcHandlers();
+  void companionServer.start().catch(() => {
+    const state = companionServer.snapshot();
+    console.error(`[companion] ${state.diagnostic || 'The local companion could not start.'}`);
+  });
   createMainWindow();
 
   app.on('activate', () => {
@@ -294,4 +384,8 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
+});
+
+app.on('before-quit', () => {
+  void companionServer.close();
 });

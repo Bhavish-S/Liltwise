@@ -83,3 +83,17 @@ export function mergeRegeneratedSection<Section extends { id: string }, Script e
     sections: script.sections.map((section) => section.id === replacement.id ? replacement : section),
   };
 }
+
+export function formatScriptForTeleprompter(script: {
+  title: string;
+  sections: Array<{ title: string; stageDirection: string; speechText: string }>;
+}): string {
+  return [
+    script.title,
+    ...script.sections.map((section) => [
+      section.title,
+      section.stageDirection ? `[${section.stageDirection}]` : '',
+      section.speechText,
+    ].filter(Boolean).join('\n')),
+  ].join('\n\n');
+}

@@ -12,6 +12,9 @@ Electron desktop app ──HTTPS──> the same authenticated server APIs
        ├── main process: operating-system windows and privileged work
        ├── preload: small, validated bridge
        └── renderer: React user interface
+
+Same-computer browser ──HTTP over loopback──> Electron main-process companion
+       └── one-time pairing and one explicitly approved script import
 ```
 
 The website is the public product site and, in later milestones, the account and script workspace. A browser page cannot float above unrelated desktop applications. The installed Electron application owns the floating teleprompter and any future operating-system integrations.
@@ -39,10 +42,23 @@ The site and desktop UI are separate because their interaction patterns differ. 
 
 ## Desktop security boundary
 
+### Website-to-desktop transfer
+
+When the user chooses **Connect Website**, the Electron main process starts a small HTTP service bound only to `127.0.0.1:43129`. It is not exposed to the local network. The website connects to that computer's loopback address; scripts do not pass through a Liltwise server or get saved to an account by this bridge.
+
+The desktop app displays a cryptographically random eight-digit code for five minutes. The website submits the code to the exact allowed origin and receives a random bearer token once. The website keeps that token in React memory only; the Electron process keeps only a one-way token digest. The session expires after eight hours and is cleared when the app closes, a replacement pairing is created, or either side disconnects. The pairing code permits one successful use and has a small failed-attempt limit. Only one incoming script can wait for review. The desktop validates it again, shows a preview, and replaces the workspace/teleprompter script only after the user chooses **Review and load**.
+
+The bridge accepts only exact configured browser origins, the expected loopback Host, JSON, a named client header, and bounded schema-valid requests. It has no route for commands, arbitrary files, or general IPC. CORS is not authorization by itself; the pairing token authorizes transfers. HTTP on loopback is intended only for this same-computer use. It does not defend against a compromised browser page with an already paired token or malware running as the same local user.
+
+Development builds allow `http://localhost:3000` and `http://127.0.0.1:3000`. Production desktop packages must be built with `LILTWISE_ALLOWED_WEB_ORIGINS` set to a comma-separated list of exact HTTPS website origins (for example, the official origin once finalized). Invalid configuration leaves the feature unavailable with an in-app diagnostic rather than opening a broader listener. Keep the website origin list narrow and never include URL paths or wildcards.
+
+Browser vendors may require a local-network permission before a public website can contact loopback. This permission behavior varies by browser/version and must be tested on real macOS and Windows installations. Explain permission denial to users; do not recommend weakening browser security. The service does not claim to be invisible to screen sharing or recording.
+
 - Electron's main process owns window creation and operating-system access.
 - The renderer is a sandboxed UI. It has no Node.js integration.
 - A preload script exposes only named, typed operations. It does not expose raw IPC, shell execution, or arbitrary filesystem access.
 - Zod validates data when it crosses the process boundary; TypeScript types alone disappear at runtime.
+- The loopback companion server lives in the main process and has its own origin, host, request-size, and script validation. Website data does not enter the Electron renderer until the user approves the pending import.
 - Navigation and new-window creation are restricted. Remote content is not loaded into a privileged renderer.
 
 ## Platform-specific behavior

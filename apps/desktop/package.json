@@ -10,7 +10,8 @@
     "make:mac": "electron-forge make --platform darwin --arch arm64",
     "make:windows": "electron-forge make --platform win32 --arch x64",
     "lint": "eslint src forge.config.ts vite.*.config.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test src/companion-server.test.ts"
   },
   "dependencies": {
     "@liltwise/contracts": "workspace:*",

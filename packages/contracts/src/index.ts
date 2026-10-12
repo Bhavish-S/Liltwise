@@ -139,3 +139,59 @@ export type GeneratedSection = z.infer<typeof generatedSectionSchema>;
 export type ScriptDraft = z.infer<typeof scriptDraftSchema>;
 export type GeneratedScript = z.infer<typeof generatedScriptSchema>;
 export type EventBrainGenerationRequest = z.infer<typeof eventBrainGenerationRequestSchema>;
+
+export const desktopScriptTransferSchema = z.object({
+  transferId: z.string().uuid(),
+  script: generatedScriptSchema,
+  eventTitle: shortText(200),
+  eventType: shortText(120),
+}).strict().superRefine((transfer, context) => {
+  const ids = transfer.script.sections.map((section) => section.id);
+  if (new Set(ids).size !== ids.length) {
+    context.addIssue({ code: 'custom', path: ['script', 'sections'], message: 'Script section IDs must be unique.' });
+  }
+  const printableLength = transfer.script.title.length + transfer.script.sections.reduce(
+    (length, section) => length + section.title.length + section.stageDirection.length + section.speechText.length + 8,
+    0,
+  );
+  if (printableLength > 100_000) {
+    context.addIssue({ code: 'custom', path: ['script', 'sections'], message: 'The formatted script is too long for the teleprompter.' });
+  }
+});
+
+export const pairingCodeRequestSchema = z.object({ code: z.string().regex(/^\d{8}$/u) }).strict();
+export const companionTransferIdSchema = z.string().uuid();
+export const pairingResponseSchema = z.object({ token: z.string().regex(/^[A-Za-z0-9_-]{43}$/u) }).strict();
+export const companionHealthSchema = z.object({ ok: z.literal(true), paired: z.boolean() }).strict();
+export const companionSnapshotSchema = z.object({
+  available: z.boolean(),
+  diagnostic: z.string().max(200),
+  allowedWebsiteConfigured: z.boolean(),
+  pairingCode: z.string().regex(/^\d{8}$/u).nullable(),
+  pairingExpiresAt: z.number().int().nullable(),
+  paired: z.boolean(),
+  pendingImport: desktopScriptTransferSchema.nullable(),
+}).strict();
+export const importedTeleprompterScriptSchema = z.object({
+  transferId: z.string().uuid(),
+  title: z.string().min(1).max(200),
+  sectionCount: z.number().int().min(1).max(40),
+  formattedText: z.string().min(1).max(100_000),
+}).strict();
+export const companionActionResultSchema = z.discriminatedUnion('ok', [
+  z.object({ ok: z.literal(true), message: z.string(), imported: importedTeleprompterScriptSchema.optional() }),
+  z.object({ ok: z.literal(false), message: z.string() }),
+]);
+
+export const COMPANION_PAIR_CHANNEL = 'companion:pairing-code' as const;
+export const COMPANION_REVOKE_CHANNEL = 'companion:revoke' as const;
+export const COMPANION_SNAPSHOT_CHANNEL = 'companion:snapshot' as const;
+export const COMPANION_ACCEPT_IMPORT_CHANNEL = 'companion:accept-import' as const;
+export const COMPANION_DISMISS_IMPORT_CHANNEL = 'companion:dismiss-import' as const;
+export const COMPANION_STATE_CHANNEL = 'companion:state' as const;
+export const COMPANION_BASE_URL = 'http://127.0.0.1:43129' as const;
+
+export type DesktopScriptTransfer = z.infer<typeof desktopScriptTransferSchema>;
+export type CompanionSnapshot = z.infer<typeof companionSnapshotSchema>;
+export type ImportedTeleprompterScript = z.infer<typeof importedTeleprompterScriptSchema>;
+export type CompanionActionResult = z.infer<typeof companionActionResultSchema>;

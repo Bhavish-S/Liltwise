@@ -75,6 +75,32 @@ Automated document extraction tests ran against generated in-memory TXT, PDF and
 7. Clear the script and confirm the workspace disables opening and shows an explanation; the floating window should display its empty state if updated with an empty draft.
 8. Confirm no microphone prompt appears and do not assume the overlay is omitted from any screen share or recording.
 
+## Website-to-desktop transfer checks
+
+Automated desktop tests send HTTP requests to a loopback-only server on an ephemeral port. They cover the configured Origin and Host checks, pairing and session expiry, failed pairing limits, token revocation, transfer schema checks, duplicate transfer IDs, pending import storage, and dismissal. The main-process approval handler is verified by code review and the production build, but automated tests do not exercise user confirmation or the complete website-to-Electron UI handoff. These tests also do not exercise a real browser's local-network permission prompt.
+
+For a manual same-computer check:
+
+1. Start the website and desktop app on the same computer. In a development build, use `http://localhost:3000` or `http://127.0.0.1:3000`.
+2. Create a script in the website with **Write a script manually** (no AI key required), or generate one if credentials are available. Edit a section and choose **Connect to Desktop**. If your browser asks whether the site may access devices on your local network, allow it only if you want this transfer. If the browser blocks it, record browser/version and the exact message; do not disable browser protections.
+3. In Electron, choose **Connect Website** and enter the displayed eight-digit code in the website. Confirm the pairing code disappears after success and the website says it is paired.
+4. Choose **Send to Desktop**. Confirm the Electron workspace shows a preview and that no script changes until **Review and load** is selected. Approve and confirm the edited words, section order, and stage directions appear in the desktop workspace and floating teleprompter.
+5. Send a second script while one is waiting. Confirm the desktop asks you to review or dismiss the first. Dismiss it and check that the current desktop draft is unchanged.
+6. Disconnect from each side, close the desktop app, and try sending with a stale page. Confirm the website reports that the connection expired or was revoked and that a new pairing is required.
+7. Repeat on macOS and Windows, and with supported browsers. A passing Node HTTP test is not evidence that browser permission prompts, cross-origin behavior, desktop window movement, or Windows behavior work.
+
+Production desktop builds must be created with `LILTWISE_ALLOWED_WEB_ORIGINS` set to comma-separated exact HTTPS website origins. Do not put a wildcard or path in the list. The current local development setup is configured for the two localhost origins above. The official production domain and browser permission behavior remain to be verified.
+
+### Milestone 4 end-to-end check run
+
+- Website: existing Next.js development server at `http://localhost:3000`; HTTP response was 200. Electron was started with `pnpm dev:desktop`; Vite renderer and companion service started on their configured ports. The desktop workspace and companion status responded.
+- Created a temporary script in the website using **Write a script manually**; no AI credentials or fake generation response were used. It contained three ordered sections, Kannada and accented text, and unique marker phrases.
+- The website's real **Connect to Desktop** action reached the loopback service and opened pairing. The local browser showed no Local Network Access permission prompt. Entering the code shown by the desktop paired the apps; the website showed **Connected** and the desktop showed **Website paired**.
+- The website's **Send to Desktop** action received the service's success response. The desktop displayed the incoming title, three-section count and opening preview. Before approval, the desktop draft still contained its original sample text.
+- Accepted the incoming script through the desktop confirmation. The desktop editor showed the title, all three sections in order, and the original Kannada/accented text. Opened the floating teleprompter and verified the same transferred text and marker in its rendered content and screenshot.
+- No browser console errors were recorded during the website connection and send. This verifies local development on this Mac with the available in-app browser. It does not verify a deployed HTTPS origin's permission behavior, other browsers, or Windows.
+- The pairing code and session token were not included in test output or documentation. The test script is temporary browser-session data and is not included in the repository.
+
 ## Checks completed for Milestone 2
 
 - The packaged macOS app workspace and floating teleprompter were visually inspected.

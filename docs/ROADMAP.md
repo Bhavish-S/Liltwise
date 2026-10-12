@@ -14,6 +14,12 @@
 - macOS window level and translucency are implemented but still need manual capture, full-screen, and Spaces validation. Windows behavior and packaging need a Windows runner.
 - Next: validate the overlay in common macOS meeting/share scenarios and run the manual acceptance checks on Windows before calling this milestone fully platform-verified.
 
+## Milestone 4 — Same-computer website-to-desktop script transfer
+
+- Implemented a loopback-only companion server in the Electron main process, one-time code pairing, short-lived in-memory authorization, validated transfers, desktop preview/approval, and explicit disconnect.
+- The website script remains in the browser session. Transfer does not add login, cloud sync, or persistent storage.
+- Next: test browser local-network permission prompts and the complete transfer flow on supported macOS browsers and Windows. Set exact production website origins when the official deployment origin is known.
+
 ## Milestone 3 — AI Event Brain (initial session-only workflow)
 
 - Implemented event details, guest and agenda inputs, server-side extraction for TXT/Markdown/PDF/DOCX, a reviewable guide field, and structured server-side OpenAI generation/refinement.

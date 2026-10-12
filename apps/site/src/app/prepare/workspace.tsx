@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import {
+  COMPANION_BASE_URL,
+  desktopScriptTransferSchema,
   eventBriefSchema,
   generatedScriptSchema,
   type AgendaItem,
@@ -44,6 +46,7 @@ const roleLabels: Record<EventBrief['speakingRole'], string> = {
 };
 
 type ApiError = { error?: { code?: string; message?: string } };
+type DesktopConnectionState = 'disconnected' | 'pairing' | 'connected' | 'sending' | 'sent' | 'failed';
 
 function createId(): string {
   return crypto.randomUUID();
@@ -108,6 +111,11 @@ export function EventBrainWorkspace() {
   const [uploadError, setUploadError] = useState('');
   const [sectionInstructions, setSectionInstructions] = useState<Record<string, string>>({});
   const [showEventDetails, setShowEventDetails] = useState(true);
+  const [desktopConnectionState, setDesktopConnectionState] = useState<DesktopConnectionState>('disconnected');
+  const [desktopToken, setDesktopToken] = useState('');
+  const [pairingCode, setPairingCode] = useState('');
+  const [showPairingDialog, setShowPairingDialog] = useState(false);
+  const [desktopMessage, setDesktopMessage] = useState('');
   function updateEvent<K extends keyof EventBrief>(key: K, value: EventBrief[K]): void {
     setEvent((current) => ({ ...current, [key]: value }));
     setFormError('');
@@ -247,6 +255,23 @@ export function EventBrainWorkspace() {
     setNotice('Your edit is saved in this page for this session.');
   }
 
+  function startManualScript(): void {
+    const manualDraft = enrichScriptDraft({
+      title: 'Untitled script',
+      sections: [
+        { id: createId(), title: 'Opening', purpose: 'Welcome the audience', speechText: 'Write your opening remarks here.', estimatedSeconds: 0, stageDirection: '' },
+        { id: createId(), title: 'Main message', purpose: 'Share the key points', speechText: 'Write your main message here.', estimatedSeconds: 0, stageDirection: '' },
+        { id: createId(), title: 'Closing', purpose: 'End with a clear takeaway', speechText: 'Write your closing remarks here.', estimatedSeconds: 0, stageDirection: '' },
+      ],
+      confirmations: [],
+      factChecklist: [],
+    }) as GeneratedScript;
+    setScript(manualDraft);
+    setShowEventDetails(false);
+    setGenerationError('');
+    setNotice('Manual draft created. Edit each section below. It stays in this browser session and does not need AI generation.');
+  }
+
   async function copyText(text: string, label: string): Promise<void> {
     try {
       await navigator.clipboard.writeText(text);
@@ -254,6 +279,105 @@ export function EventBrainWorkspace() {
       setGenerationError('');
     } catch {
       setGenerationError('Clipboard access is unavailable. Select the script text and copy it manually.');
+    }
+  }
+
+  function desktopErrorMessage(error: unknown): string {
+    if (error instanceof TypeError) {
+      return 'Could not reach the Liltwise desktop app. Check that it is open and that your browser allows this site to connect to this computer’s local network.';
+    }
+    return error instanceof Error ? error.message : 'The desktop connection could not complete.';
+  }
+
+  async function checkDesktopConnection(): Promise<void> {
+    setDesktopConnectionState('pairing');
+    setDesktopMessage('Checking for the Liltwise desktop app on this computer…');
+    try {
+      const response = await fetch(`${COMPANION_BASE_URL}/health`, {
+        method: 'GET', mode: 'cors', credentials: 'omit', cache: 'no-store',
+        headers: { 'X-Liltwise-Client': 'website' }, signal: AbortSignal.timeout(4000),
+      });
+      if (!response.ok) throw new Error('The desktop app did not accept the connection. Check that it is up to date and open.');
+      setShowPairingDialog(true);
+      setDesktopMessage('Enter the one-time code shown in the desktop app.');
+    } catch (error) {
+      setDesktopConnectionState('failed');
+      setDesktopMessage(desktopErrorMessage(error));
+    }
+  }
+
+  async function pairWithDesktop(): Promise<void> {
+    if (!/^\d{8}$/u.test(pairingCode)) {
+      setDesktopConnectionState('failed');
+      setDesktopMessage('Enter the eight-digit code shown in the desktop app.');
+      return;
+    }
+    setDesktopConnectionState('pairing');
+    setDesktopMessage('Checking the code…');
+    try {
+      const response = await fetch(`${COMPANION_BASE_URL}/pair`, {
+        method: 'POST', mode: 'cors', credentials: 'omit', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', 'X-Liltwise-Client': 'website', 'X-Liltwise-Pairing': '1' },
+        body: JSON.stringify({ code: pairingCode }), signal: AbortSignal.timeout(5000),
+      });
+      const body = await response.json().catch(() => null) as { token?: unknown; error?: string } | null;
+      if (!response.ok || typeof body?.token !== 'string') throw new Error(body?.error || 'The code is invalid or expired. Create a new code in the desktop app.');
+      setDesktopToken(body.token);
+      setPairingCode('');
+      setShowPairingDialog(false);
+      setDesktopConnectionState('connected');
+      setDesktopMessage('Connected. Your script will wait for your approval in the desktop app.');
+    } catch (error) {
+      setDesktopConnectionState('failed');
+      setDesktopMessage(desktopErrorMessage(error));
+    }
+  }
+
+  async function sendScriptToDesktop(): Promise<void> {
+    if (!script || !desktopToken) return;
+    const transfer = desktopScriptTransferSchema.safeParse({
+      transferId: crypto.randomUUID(), script, eventTitle: event.title, eventType: event.eventType,
+    });
+    if (!transfer.success) {
+      setDesktopConnectionState('failed');
+      setDesktopMessage('This script is too long or contains invalid section details. Shorten or correct it before sending.');
+      return;
+    }
+    setDesktopConnectionState('sending');
+    setDesktopMessage('Sending your current edited script…');
+    try {
+      const response = await fetch(`${COMPANION_BASE_URL}/transfer`, {
+        method: 'POST', mode: 'cors', credentials: 'omit', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', 'X-Liltwise-Client': 'website', Authorization: `Bearer ${desktopToken}` },
+        body: JSON.stringify(transfer.data), signal: AbortSignal.timeout(8000),
+      });
+      const body = await response.json().catch(() => null) as { received?: unknown; transferId?: unknown; error?: string } | null;
+      if (!response.ok || body?.received !== true || body.transferId !== transfer.data.transferId) {
+        throw new Error(body?.error || 'The desktop app did not confirm receipt. Your website script is still available.');
+      }
+      setDesktopConnectionState('sent');
+      setDesktopMessage('Sent to the desktop app. Review and approve it there; your website draft remains available.');
+    } catch (error) {
+      setDesktopConnectionState('failed');
+      setDesktopMessage(desktopErrorMessage(error));
+    }
+  }
+
+  async function disconnectDesktop(): Promise<void> {
+    if (!desktopToken) return;
+    try {
+      const response = await fetch(`${COMPANION_BASE_URL}/disconnect`, {
+        method: 'POST', mode: 'cors', credentials: 'omit', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', 'X-Liltwise-Client': 'website', Authorization: `Bearer ${desktopToken}` },
+        body: '{}', signal: AbortSignal.timeout(4000),
+      });
+      if (!response.ok) throw new Error('The desktop app did not confirm disconnection.');
+      setDesktopMessage('Disconnected. The desktop app revoked this browser session.');
+    } catch {
+      setDesktopMessage('This page cleared its session, but the desktop app could not confirm revocation. Use Disconnect website in the desktop app if it is still open.');
+    } finally {
+      setDesktopToken('');
+      setDesktopConnectionState('disconnected');
     }
   }
 
@@ -364,12 +488,17 @@ export function EventBrainWorkspace() {
         </section>
 
         <section className={`script-result-card ${script ? 'has-script' : ''}`} aria-labelledby="script-result-title" aria-live="polite">
-          {!script ? <div className="script-empty-state"><div className="empty-mark" aria-hidden="true">L</div><p className="card-kicker">02 / YOUR SCRIPT</p><h2 id="script-result-title">A thoughtful draft<br />starts with context.</h2><p>Complete the event brief to prepare a script shaped around your role, audience, people, and agenda.</p><div className="empty-script-outline"><span>01</span>Opening and welcome<i /><span>02</span>Transitions and handoffs<i /><span>03</span>Closing, when it fits</div><small>Every output is a draft. Verify names, titles, timing, and protocol.</small></div> : <>
+          {!script ? <div className="script-empty-state"><div className="empty-mark" aria-hidden="true">L</div><p className="card-kicker">02 / YOUR SCRIPT</p><h2 id="script-result-title">A thoughtful draft<br />starts with context.</h2><p>Complete the event brief to prepare a script shaped around your role, audience, people, and agenda.</p><button className="button button-primary manual-script-button" type="button" onClick={startManualScript}>Write a script manually <span aria-hidden="true">↗</span></button><div className="empty-script-outline"><span>01</span>Opening and welcome<i /><span>02</span>Transitions and handoffs<i /><span>03</span>Closing, when it fits</div><small>Every output is a draft. Verify names, titles, timing, and protocol.</small></div> : <>
             <div className="script-output-header">
               <div><p className="card-kicker">02 / EVENT SCRIPT</p><input className="script-title-input" aria-label="Script title" value={script.title} maxLength={200} onChange={(e) => setScript((current) => current ? { ...current, title: e.target.value } : current)} /><p className="script-meta">{script.totalWordCount.toLocaleString()} words <i /> about {script.estimatedMinutes} min at 130 wpm</p></div>
               <button className="text-button" type="button" onClick={() => setShowEventDetails(true)}>Edit event details</button>
             </div>
-            <div className="script-toolbar"><button type="button" onClick={() => void copyText(scriptText(script), 'Complete script')}>Copy full script</button><button type="button" onClick={() => downloadText('liltwise-script.md', markdownText(script), 'text/markdown;charset=utf-8')}>Download Markdown</button><button type="button" onClick={() => downloadText('liltwise-script.txt', scriptText(script), 'text/plain;charset=utf-8')}>Download text</button></div>
+            <div className="script-toolbar"><button type="button" onClick={() => void copyText(scriptText(script), 'Complete script')}>Copy full script</button><button type="button" onClick={() => downloadText('liltwise-script.md', markdownText(script), 'text/markdown;charset=utf-8')}>Download Markdown</button><button type="button" onClick={() => downloadText('liltwise-script.txt', scriptText(script), 'text/plain;charset=utf-8')}>Download text</button><button className="desktop-send-button" type="button" disabled={desktopConnectionState === 'sending'} onClick={() => desktopToken ? void sendScriptToDesktop() : void checkDesktopConnection()}>{desktopToken ? desktopConnectionState === 'sending' ? 'Sending…' : 'Send to Desktop' : 'Connect to Desktop'} <span aria-hidden="true">↗</span></button></div>
+            <div className={`desktop-sync-panel state-${desktopConnectionState}`} aria-live="polite">
+              <span className="desktop-sync-indicator"><i />{desktopConnectionState === 'connected' || desktopConnectionState === 'sent' || desktopConnectionState === 'sending' ? 'Connected' : desktopConnectionState === 'pairing' ? 'Pairing' : desktopConnectionState === 'failed' ? 'Connection failed' : 'Disconnected'}</span>
+              <p>{desktopMessage || (desktopToken ? 'Your desktop app is paired and ready for this page session.' : 'Pair once to send this edited script to the desktop app on this computer.')}</p>
+              {desktopToken && <button className="text-button" type="button" disabled={desktopConnectionState === 'sending'} onClick={() => void disconnectDesktop()}>Disconnect</button>}
+            </div>
             <div className="script-section-list">
               {script.sections.map((section, index) => <article className="script-section-editor" key={section.id}>
                 <div className="script-section-heading"><span className="script-section-number">{String(index + 1).padStart(2, '0')}</span><div><h3>{section.title}</h3><p>{section.purpose}</p></div><span className="section-time">~{Math.max(1, Math.ceil(section.estimatedSeconds / 60))} min</span></div>
@@ -387,6 +516,18 @@ export function EventBrainWorkspace() {
           {notice && <p className="success-note" role="status">{notice}</p>}
         </section>
       </div>
+      {showPairingDialog && <div className="pairing-backdrop" role="presentation" onMouseDown={(mouseEvent) => { if (mouseEvent.target === mouseEvent.currentTarget) setShowPairingDialog(false); }}>
+        <section className="pairing-dialog" role="dialog" aria-modal="true" aria-labelledby="pairing-dialog-title">
+          <button className="pairing-close" type="button" aria-label="Close pairing dialog" onClick={() => setShowPairingDialog(false)}>×</button>
+          <p className="eyebrow"><span className="eyebrow-dot" /> PRIVATE TO THIS COMPUTER</p>
+          <h2 id="pairing-dialog-title">Connect your desktop app</h2>
+          <p>Open Liltwise on this computer, choose <b>Connect Website</b>, and enter its eight-digit one-time code below. The code expires after five minutes.</p>
+          <label className="form-field pairing-code-field"><span>Desktop pairing code</span><input autoFocus autoComplete="one-time-code" inputMode="numeric" pattern="[0-9]{8}" maxLength={8} value={pairingCode} onChange={(event) => setPairingCode(event.target.value.replace(/\D/gu, '').slice(0, 8))} placeholder="00000000" /></label>
+          {desktopMessage && <p className={desktopConnectionState === 'failed' ? 'pairing-error' : 'pairing-help'} role="status">{desktopMessage}</p>}
+          <button className="button button-primary pairing-submit" type="button" disabled={desktopConnectionState === 'pairing' && desktopMessage === 'Checking the code…'} onClick={() => void pairWithDesktop()}>Pair with this computer</button>
+          <p className="pairing-footnote">The temporary token stays in this page's memory. Close the desktop app or disconnect to revoke it.</p>
+        </section>
+      </div>}
       <footer className="prepare-footer section-wrap"><Link className="wordmark" href="/"><span aria-hidden="true" className="wordmark-mark"><svg viewBox="0 0 32 32" fill="none"><path d="M7 22V10l9 8 9-8v12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span><span>liltwise</span></Link><span>Event drafts are yours to review. No event data is saved by this milestone.</span></footer>
     </main>
   );

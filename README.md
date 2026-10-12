@@ -37,7 +37,7 @@ pnpm dev:site
 
 Then open <http://localhost:3000>.
 
-Choose **Prepare an event** to use Event Brain. Uploaded TXT, Markdown, PDF, and DOCX guides are parsed on the server, returned as text for review, and are not kept as files. When you generate or refine a script, the event details and guide text are sent to OpenAI. The application requests that the provider not store the response, but this does not replace review of the provider's current data terms. The current app does not save drafts after the browser session.
+Choose **Prepare an event** to use Event Brain. You can write a manual script without an AI key or generate one using the server-side AI integration. Uploaded TXT, Markdown, PDF, and DOCX guides are parsed on the server, returned as text for review, and are not kept as files. When you generate or refine a script, the event details and guide text are sent to OpenAI. The application requests that the provider not store the response, but this does not replace review of the provider's current data terms. The current app does not save drafts after the browser session.
 
 Start the desktop companion in a separate terminal:
 
@@ -46,6 +46,8 @@ pnpm dev:desktop
 ```
 
 The desktop command launches Electron with its React welcome screen. Close the app window to end the desktop session.
+
+To move a prepared website script to the desktop app, keep both apps open on the same computer. In the desktop workspace choose **Connect Website**, then use **Connect to Desktop** on the website and enter the one-time code. After sending, review the preview and choose **Review and load** in Electron before it replaces the desktop script. The connection uses the computer's loopback network and keeps its temporary token in memory. A browser may ask permission for local-network access. The development app accepts only the localhost website at port 3000; production desktop builds need the exact HTTPS website origins supplied through `LILTWISE_ALLOWED_WEB_ORIGINS` at build time.
 
 ## Checks and builds
 
@@ -56,7 +58,7 @@ pnpm test
 pnpm build
 ```
 
-See [docs/TESTING.md](docs/TESTING.md) for what these checks do and which platform checks still need Windows hardware or a Windows CI runner.
+See [docs/TESTING.md](docs/TESTING.md) for what these checks do and which platform checks still need Windows hardware or a Windows CI runner. The automated desktop transfer tests do not replace manual browser permission and end-to-end testing.
 
 ## Project map
 
