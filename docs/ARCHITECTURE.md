@@ -3,10 +3,9 @@
 ## Shape of the product
 
 ```text
-Browser ──HTTPS──> Next.js website and initial server endpoints
-                         │
-                         ├── future database and authentication provider
-                         └── future server-only AI provider calls
+Browser ──HTTPS──> Next.js website and server endpoints
+                         ├── server-only OpenAI Responses API calls
+                         └── temporary, in-memory rate limits (per process)
 
 Electron desktop app ──HTTPS──> the same authenticated server APIs
        │
@@ -17,11 +16,15 @@ Electron desktop app ──HTTPS──> the same authenticated server APIs
 
 The website is the public product site and, in later milestones, the account and script workspace. A browser page cannot float above unrelated desktop applications. The installed Electron application owns the floating teleprompter and any future operating-system integrations.
 
+The first Event Brain flow is a session-only preparation tool. It validates event details with shared Zod schemas, lets a speaker review their generated draft, and can download Markdown or plain text. It does not require login or persist event data. The OpenAI key and model are read from server-only `OPENAI_API_KEY` and `OPENAI_MODEL` environment variables; never expose them through `NEXT_PUBLIC_*` or renderer code. The server calls the Responses API with structured Zod output, `store: false`, a bounded request size and a timeout. A small in-memory request limiter is a development safeguard, not a distributed production control. Before public launch, add deployment-level abuse controls, monitoring and an appropriate persistent rate-limit service.
+
+Guide upload accepts bounded TXT, Markdown, PDF and DOCX files. Files are parsed on the server without writing them to disk. Only extracted plain text is returned for the speaker to review. PDFs with scanned images need OCR, which is not included. Generation sends event fields and reviewed guide text to OpenAI. There is no account, database or application-side draft storage in this milestone. The server asks the provider not to store generation responses, but users still need a clear provider data-use notice and review of applicable provider terms.
+
 ## Monorepo layout
 
 - `apps/site`: Next.js, React, TypeScript, and the initial server-side API location.
 - `apps/desktop`: Electron, React, TypeScript, Vite, and Electron Forge packaging.
-- `packages/contracts`: Zod schemas and shared IPC/API data shapes.
+- `packages/contracts`: Zod schemas and shared IPC/API/event/script data shapes.
 - `packages/domain`: provider-independent product types and rules shared by the website and desktop app.
 
 ## Desktop teleprompter
@@ -50,7 +53,7 @@ Neither platform offers a universal guarantee that a window will be absent from 
 
 ## Server and secrets
 
-For the initial product, Next.js server endpoints can handle website and desktop requests. Store AI provider secrets only in server-side environment variables. When users, events, and scripts need durable storage, add a managed database and authentication solution behind server APIs. Separate services are not needed until scale or team boundaries justify them.
+Next.js server endpoints currently handle document extraction and website-side generation. Store AI provider secrets only in server-side environment variables. When users, events, and scripts need durable storage, add a managed database and authentication solution behind server APIs. Separate services are not needed until scale or team boundaries justify them.
 
 ## Meeting integrations
 

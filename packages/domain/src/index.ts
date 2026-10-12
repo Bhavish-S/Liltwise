@@ -20,8 +20,8 @@ export const PRODUCT_CAPABILITIES = [
   },
   {
     title: 'Event-aware speech drafts',
-    description: 'Prepare a draft around the event, audience, and guidance you provide.',
-    status: 'planned',
+    description: 'Build an editable speaking draft from your event, audience, agenda, and guide.',
+    status: 'in-development',
   },
 ] as const satisfies readonly ProductCapability[];
 
@@ -47,5 +47,39 @@ export function clampReadingSettings(settings: ReadingSettingsValues): ReadingSe
     fontSize: Math.min(56, Math.max(22, Math.round(settings.fontSize / 2) * 2)),
     scrollSpeed: Math.min(96, Math.max(12, Math.round(settings.scrollSpeed / 4) * 4)),
     surfaceOpacity: Math.min(95, Math.max(70, Math.round(settings.surfaceOpacity / 5) * 5)),
+  };
+}
+
+export function estimateSpeakingSeconds(wordCount: number, wordsPerMinute = 130): number {
+  if (!Number.isFinite(wordCount) || wordCount <= 0) return 0;
+  return Math.ceil((wordCount / wordsPerMinute) * 60);
+}
+
+export function enrichScriptDraft<Section extends { speechText: string; estimatedSeconds: number }, Draft extends { sections: Section[] }>(
+  draft: Draft,
+): Draft & { totalWordCount: number; estimatedMinutes: number } {
+  const sections = draft.sections.map((section) => ({
+    ...section,
+    estimatedSeconds: estimateSpeakingSeconds(countWords(section.speechText)),
+  }));
+  const totalWordCount = sections.reduce((total, section) => total + countWords(section.speechText), 0);
+  return {
+    ...draft,
+    sections,
+    totalWordCount,
+    estimatedMinutes: Math.round((estimateSpeakingSeconds(totalWordCount) / 60) * 10) / 10,
+  };
+}
+
+export function mergeRegeneratedSection<Section extends { id: string }, Script extends { sections: Section[] }>(
+  script: Script,
+  replacement: Section,
+): Script {
+  if (!script.sections.some((section) => section.id === replacement.id)) {
+    throw new Error('The section to replace does not exist in this script.');
+  }
+  return {
+    ...script,
+    sections: script.sections.map((section) => section.id === replacement.id ? replacement : section),
   };
 }

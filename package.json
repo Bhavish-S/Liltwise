@@ -13,7 +13,7 @@
     "build": "pnpm --filter @liltwise/site build && pnpm --filter @liltwise/desktop build",
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint apps packages",
-    "test": "pnpm --filter @liltwise/domain test",
+    "test": "pnpm --filter @liltwise/domain test && pnpm --filter @liltwise/site test",
     "check": "pnpm lint && pnpm typecheck && pnpm build"
   },
   "devDependencies": {

@@ -3,7 +3,7 @@
 **Your AI Co-Presenter**  
 *Stay present. Never lose your words.*
 
-Liltwise is planned as a website for preparing event-specific scripts and a macOS/Windows desktop companion for presenting them. The current milestone creates the website and desktop application shells; it does not yet generate speeches, listen to a microphone, or provide the floating teleprompter.
+Liltwise is a website for preparing event-specific speaking scripts and a macOS/Windows desktop companion for presenting them. The website now includes an initial Event Brain workspace: enter event details, review extracted event-guide text, generate a structured script through a server-side OpenAI connection, edit it, and export Markdown or plain text. Script drafts are held in the browser session and are not saved to an account or database.
 
 ## Prerequisites
 
@@ -21,6 +21,8 @@ From this folder, run:
 pnpm install --store-dir ./.pnpm-store
 ```
 
+For script generation, copy `apps/site/.env.example` to `apps/site/.env.local` and set `OPENAI_API_KEY` and `OPENAI_MODEL` in that local file. Keep the key private: never paste it into chat or commit `.env.local`. The API key is read only by the Next.js server. If the values are absent, the event form and document extraction still work, while generation returns a clear setup message.
+
 The package-manager store is kept inside this repository so setup does not place dependency files elsewhere on the computer. It is ignored by Git.
 
 pnpm uses the hoisted workspace layout required by Electron Forge. Only the approved `esbuild` and `electron-winstaller` dependency setup scripts are enabled; other dependency scripts remain blocked unless reviewed.
@@ -35,6 +37,8 @@ pnpm dev:site
 
 Then open <http://localhost:3000>.
 
+Choose **Prepare an event** to use Event Brain. Uploaded TXT, Markdown, PDF, and DOCX guides are parsed on the server, returned as text for review, and are not kept as files. When you generate or refine a script, the event details and guide text are sent to OpenAI. The application requests that the provider not store the response, but this does not replace review of the provider's current data terms. The current app does not save drafts after the browser session.
+
 Start the desktop companion in a separate terminal:
 
 ```sh
@@ -48,6 +52,7 @@ The desktop command launches Electron with its React welcome screen. Close the a
 ```sh
 pnpm lint
 pnpm typecheck
+pnpm test
 pnpm build
 ```
 
@@ -60,5 +65,3 @@ See [docs/TESTING.md](docs/TESTING.md) for what these checks do and which platfo
 - `packages/contracts` — runtime-validated shared contracts.
 - `packages/domain` — reusable product concepts and rules.
 - `docs` — product, architecture, decisions, roadmap, and verification notes.
-
-No GitHub remote has been contacted beyond configuring the local `origin`; this project has not been pushed.

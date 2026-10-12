@@ -49,3 +49,9 @@
 **Decision:** Load the floating teleprompter from a second view in the existing renderer bundle, selected through a local query parameter. Keep the current script and reading settings in the Electron main process for the current session, and exchange them through narrow Zod-validated preload methods and events.
 
 **Reason:** The two windows need the same app identity and shared script state, but they do not need separate builds or direct renderer-to-renderer communication. A single trusted main-process owner makes hide/reopen and intentional updates predictable while keeping filesystem, shell, and raw IPC access out of the renderer.
+
+## 9. Server-side structured generation for the first Event Brain
+
+**Decision:** Generate and refine scripts through a Next.js server endpoint using the OpenAI Responses API and Zod-based structured output. Keep the API key in server-only environment configuration, set `store: false`, and validate both requests and returned data. Store the event and draft only in the current browser session for now.
+
+**Reason:** This gives the user a real event-specific draft and editable sections without exposing credentials, adding an account/database system, or tying the speaking workflow to a meeting provider. Uploaded source files are parsed on the server and discarded; only reviewed extracted text joins the generation request. A production launch still needs deployment-grade rate limits, provider/data-use disclosure, and careful logging and retention policies.

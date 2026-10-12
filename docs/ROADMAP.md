@@ -14,29 +14,30 @@
 - macOS window level and translucency are implemented but still need manual capture, full-screen, and Spaces validation. Windows behavior and packaging need a Windows runner.
 - Next: validate the overlay in common macOS meeting/share scenarios and run the manual acceptance checks on Windows before calling this milestone fully platform-verified.
 
-## Milestone 3 — Accounts and event/script workspace
+## Milestone 3 — AI Event Brain (initial session-only workflow)
 
-- Add real account access, persistent event information, guide input, and editable saved scripts.
-- Keep data access behind secure server-side APIs.
+- Implemented event details, guest and agenda inputs, server-side extraction for TXT/Markdown/PDF/DOCX, a reviewable guide field, and structured server-side OpenAI generation/refinement.
+- Implemented script section editing, full or section regeneration, fact-confirmation prompts, and Markdown/plain-text export.
+- Drafts are not saved to accounts or a database; the user must export to keep a copy. An OpenAI key and model must be configured locally for live generation.
+- Before a public launch, add login and persistent storage only after choosing retention behavior, deployment-grade rate limiting, monitoring, provider data-use disclosures, and production secrets management.
 
-## Milestone 4 — Event-specific speech generation
+## Next — Saved accounts and event/script workspace
 
-- Generate drafts on the server using event context.
-- Let users review and edit a draft before presenting it.
-- Keep provider credentials server-side and disclose relevant data handling.
+- Add account access and persistent event information and scripts behind secure server APIs.
+- Decide how users can delete their data and how long event guides and generated scripts are retained.
 
-## Milestone 5 — Adaptive speaking engine
+## Next — Adaptive Speaking Engine
 
-- Add permission-based microphone capture and live transcription.
-- Align changing transcripts with script text and handle pauses, skips, corrections, and repeated phrases.
+- Request microphone access only when the speaker starts the feature.
+- Align live transcript updates with script sections and handle pauses, skips, corrections, and repeated phrases.
 - Do not record or retain audio by default.
 
-## Milestone 6 — Privacy and platform validation
+## Privacy and platform validation
 
 - Test window capture behavior across selected macOS and Windows versions and meeting/share modes.
 - Document verified outcomes and limitations. Do not promise universal capture exclusion.
 
-## Milestone 7 — Packaging and production launch
+## Packaging and production launch
 
 - Build signed macOS and Windows installers, implement update delivery, and validate clean installation and upgrade paths.
 - Deploy the website and APIs, add monitoring and backups, and add billing when the product is ready to charge users.

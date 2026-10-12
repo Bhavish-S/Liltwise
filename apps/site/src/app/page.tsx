@@ -29,10 +29,11 @@ export default function HomePage() {
           <Wordmark />
           <nav aria-label="Main navigation" className="main-nav">
             <Link href="#product">The product</Link>
+            <Link href="/prepare">Prepare an event</Link>
             <Link href="#how-it-works">How it works</Link>
             <Link href="#download">Download</Link>
           </nav>
-          <Link className="header-cta" href="#download">Meet Liltwise <span aria-hidden="true">↗</span></Link>
+          <Link className="header-cta" href="/prepare">Prepare an event <span aria-hidden="true">↗</span></Link>
         </div>
       </header>
 
@@ -42,7 +43,7 @@ export default function HomePage() {
           <h1 id="hero-title">Stay present.<br /><span>Never lose</span> your words.</h1>
           <p className="hero-lede">A calmer way to prepare and deliver your next presentation. Liltwise is being built to help you bring the right words into the room—and keep your attention on the people there.</p>
           <div className="hero-actions">
-            <Link className="button button-primary" href="#product">Explore the product <span aria-hidden="true">↓</span></Link>
+            <Link className="button button-primary" href="/prepare">Prepare an event <span aria-hidden="true">↗</span></Link>
             <Link className="button button-quiet" href="#download">Desktop app status <span aria-hidden="true">↗</span></Link>
           </div>
           <div className="hero-note"><span className="note-line" /> Thoughtful support for the moments that matter.</div>

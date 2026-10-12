@@ -1,0 +1,61 @@
+import type { EventBrief, GeneratedScript } from '@liltwise/contracts';
+
+export const validEvent: EventBrief = {
+  title: 'Community science evening',
+  eventType: 'Public showcase',
+  date: '2026-11-12',
+  venue: 'Civic Hall',
+  organization: 'Northside Learning Centre',
+  speakingRole: 'host',
+  customRole: '',
+  audience: 'Students, families, and local educators.',
+  purpose: 'Celebrate student projects and invite families to explore them.',
+  language: 'English',
+  tone: 'warm',
+  customTone: '',
+  targetMinutes: 5,
+  detailLevel: 'balanced',
+  instructions: '',
+  guests: [{
+    id: 'guest-1',
+    name: 'Dr. Asha Rao',
+    officialTitle: 'Dr.',
+    designation: 'Program Director',
+    organization: 'Northside Learning Centre',
+    pronunciation: 'AH-sha ROW',
+    protocolNotes: 'Thank the director after the welcome.',
+  }],
+  agenda: [{
+    id: 'agenda-1',
+    title: 'Student demonstrations',
+    timing: 'After opening',
+    durationMinutes: 20,
+    speaker: 'Student teams',
+    handoff: 'Invite the first team to the front.',
+    notes: '',
+  }],
+  eventGuide: 'Families can visit each project table after the opening remarks.',
+};
+
+export const validDraft: GeneratedScript = {
+  title: 'Welcome to the science evening',
+  sections: [{
+    id: 'welcome',
+    title: 'Welcome',
+    purpose: 'Welcome the audience and set the scene.',
+    speechText: 'Good evening, everyone. Thank you for joining us.',
+    estimatedSeconds: 30,
+    stageDirection: 'Pause for the audience to settle.',
+  }, {
+    id: 'demonstrations',
+    title: 'Student demonstrations',
+    purpose: 'Transition to the demonstrations.',
+    speechText: 'Please join me in welcoming our first student team.',
+    estimatedSeconds: 30,
+    stageDirection: '',
+  }],
+  confirmations: ['Confirm the director’s preferred form of address.'],
+  factChecklist: ['Confirm that the student demonstrations are still scheduled first.'],
+  totalWordCount: 19,
+  estimatedMinutes: 0.2,
+};
