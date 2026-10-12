@@ -24,3 +24,28 @@ export const PRODUCT_CAPABILITIES = [
     status: 'planned',
   },
 ] as const satisfies readonly ProductCapability[];
+
+export const DEFAULT_READING_SETTINGS = {
+  fontSize: 34,
+  scrollSpeed: 32,
+  surfaceOpacity: 85,
+} as const;
+
+export interface ReadingSettingsValues {
+  fontSize: number;
+  scrollSpeed: number;
+  surfaceOpacity: number;
+}
+
+export function countWords(text: string): number {
+  const trimmed = text.trim();
+  return trimmed ? trimmed.split(/\s+/u).length : 0;
+}
+
+export function clampReadingSettings(settings: ReadingSettingsValues): ReadingSettingsValues {
+  return {
+    fontSize: Math.min(56, Math.max(22, Math.round(settings.fontSize / 2) * 2)),
+    scrollSpeed: Math.min(96, Math.max(12, Math.round(settings.scrollSpeed / 4) * 4)),
+    surfaceOpacity: Math.min(95, Math.max(70, Math.round(settings.surfaceOpacity / 5) * 5)),
+  };
+}

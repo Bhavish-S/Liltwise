@@ -24,6 +24,14 @@ The website is the public product site and, in later milestones, the account and
 - `packages/contracts`: Zod schemas and shared IPC/API data shapes.
 - `packages/domain`: provider-independent product types and rules shared by the website and desktop app.
 
+## Desktop teleprompter
+
+- The main desktop workspace and floating teleprompter use the same bundled renderer. Electron loads the teleprompter view from a local query parameter, so the app has one renderer entry and one packaged asset set.
+- The Electron main process owns the floating window and current script/settings for the lifetime of the app. Hiding the window preserves that state; reopening or explicitly updating sends validated script/settings through named IPC channels.
+- The preload exposes only typed methods for opening, updating, hiding, reading window status, and receiving teleprompter data. Zod schemas validate requests and event payloads. IPC handlers also check which of the two known application windows sent the request.
+- The overlay uses a frameless, transparent, resizable BrowserWindow with an always-on-top level. macOS adds its supported floating level and under-window vibrancy; Windows uses its default topmost level. Both still require hands-on testing on the target OS.
+- The editor draft is session-only. There is no microphone access, audio recording, speech recognition, cloud sync, or universal screen-capture exclusion.
+
 The site and desktop UI are separate because their interaction patterns differ. Share contracts and business rules first; only share visual components if that later reduces real maintenance work.
 
 ## Desktop security boundary

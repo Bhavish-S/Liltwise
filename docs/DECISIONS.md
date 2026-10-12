@@ -43,3 +43,9 @@
 **Decision:** The app shell asks for no microphone permission and does not generate or synchronize speech.
 
 **Reason:** Permission and data handling should be introduced alongside a user-visible speaking feature, not as unused foundation code.
+
+## 8. One bundled renderer for the desktop workspace and overlay
+
+**Decision:** Load the floating teleprompter from a second view in the existing renderer bundle, selected through a local query parameter. Keep the current script and reading settings in the Electron main process for the current session, and exchange them through narrow Zod-validated preload methods and events.
+
+**Reason:** The two windows need the same app identity and shared script state, but they do not need separate builds or direct renderer-to-renderer communication. A single trusted main-process owner makes hide/reopen and intentional updates predictable while keeping filesystem, shell, and raw IPC access out of the renderer.

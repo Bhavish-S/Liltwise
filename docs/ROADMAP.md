@@ -9,10 +9,10 @@
 
 ## Milestone 2 — First real floating teleprompter
 
-- Display manually entered or sample script text in an overlay.
-- Add basic movement, scrolling, text-size, and interaction controls.
-- Implement platform-specific window behavior behind adapters.
-- Verify basic behavior on a Mac and a Windows runner.
+- Implemented a session-based script editor, word and reading-time estimates, and a local floating preview window.
+- Implemented window movement/resizing, time-based auto-scroll, manual scroll, font-size and surface-opacity controls, reset, hide, and explicit script updates.
+- macOS window level and translucency are implemented but still need manual capture, full-screen, and Spaces validation. Windows behavior and packaging need a Windows runner.
+- Next: validate the overlay in common macOS meeting/share scenarios and run the manual acceptance checks on Windows before calling this milestone fully platform-verified.
 
 ## Milestone 3 — Accounts and event/script workspace
 
